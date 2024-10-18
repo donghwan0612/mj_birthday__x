@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>생일 축하합니다!</title>
+    <!-- 한글 폰트 추가 -->
+    <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic&display=swap" rel="stylesheet">
+    <style>
+        @font-face {
+            font-family: 'Nanum GarMaesGeur';
+            src: url('./font.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+        body { margin: 0; overflow: hidden; background-color: black; }
+        canvas {
+            display: block;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 편지 봉투 스타일 */
+        .envelope-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 2s ease;
+            display: none;
+        }
+
+        .envelope {
+            position: relative;
+            width: 300px;
+            height: 200px;
+            background: #87CEFA;
+            border: 1px solid #00BFFF; /* 딥 스카이 블루 */
+            box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            transition: transform 3s ease, opacity 0.5s ease;
+            cursor: pointer;
+            z-index: 5;
+            background-image: repeating-linear-gradient(
+                45deg,
+                rgba(255, 255, 255, 0.2) 0px,
+                rgba(255, 255, 255, 0.2) 2px,
+                transparent 2px,
+                transparent 4px
+            );
+        }
+
+        .flap {
+            position: absolute;
+            top: 1px;
+            left: 5px;
+            width: 96%;
+            height: 50%;
+            background: #00BFFF; /* 더 진한 하늘색으로 */
+            clip-path: polygon(0 0, 50% 100%, 100% 0);
+            transition: transform 3s ease, opacity 0.2s ease;
+            transform-origin: top center;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);
+            z-index: 40;
+        }
+
+        .base-envelope {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 300px;
+            height: 200px;
+            background: #87CEFA; /* 하늘색 */
+            clip-path: polygon(0 0, 10% 0, 50% 43%, 90% 0, 100% 0, 100% 100%, 0% 100%);
+            transform: translate(-50%, -50%);
+            transition: transform 3s ease, opacity 0.5s ease;
+            border-radius: 4px;
+            z-index: 20;
+            background-image: repeating-linear-gradient(
+                45deg,
+                rgba(255, 255, 255, 0.2) 0px,
+                rgba(255, 255, 255, 0.2) 2px,
+                transparent 2px,
+                transparent 4px
+            );
+        }
+
+        .letter {
+            position: relative;
+            position: absolute;
+            top: 2px;
+            left: 50%;
+            width: 260px;
+            height: 150px;
+            background: #ffffff; /* 흰색 */
+            border: 2px solid #e5e5e5;
+            transform: translate(-50%, 0);
+            transition: opacity 1s ease, transform 0.7s ease, height 1.3s ease;
+            border-radius: 5px;
+            box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+            background-image: url('./paper-texture.png'); /* 종이 질감 */
+            background-size: cover;
+            background-repeat: no-repeat;
+        }
+
+        /* 그라데이션 오버레이 추가 */
+        .letter::before,
+        .letter::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 30px;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .letter::before {
+            top: 0;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
+        }
+
+        .letter::after {
+            bottom: 0;
+            background: linear-gradient(to top, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
+        }
+
+        .letter-content {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            <!-- font-family: 'Cormorant Garamond', serif; -->
+            font-size: 0.6em;
+            color: #333;
+            opacity: 0;
+            transition: opacity 1s ease;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            scrollbar-width: none; /* Firefox */
+            background: transparent;
+            padding: 20px;
+            text-align: left;
+        }
+
+        .letter-content::-webkit-scrollbar {
+            display: none;
+        }
+
+        .letter-content::before {
+            top: 0;
+            background: linear-gradient(to bottom, #e6f7ff, transparent);
+        }
+
+        .letter-content::after {
+            bottom: 0;
+            background: linear-gradient(to top, #e6f7ff, transparent);
+        }
+
+
+        .letter.open {
+            height: 380px;
+            transform: translate(-50%, -50%);
+            opacity: 1;
+            z-index: 10;
+            overflow: hidden;
+        }
+        .letter-content.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <!-- 폭죽 캔버스 -->
+    <canvas id="canvas"></canvas>
+    <!-- 편지 봉투 컨테이너 -->
+    <div class="envelope-container" id="container">
+        <div class="flap" id="flap"></div>
+        <div class="base-envelope" id="base-envelope"></div>
+        <div class="envelope" id="envelope"></div>
+        <div class="letter" id="letter">
+            <div class="letter-content" id="letter-content">
+                <p id="typed-text"></p>
+            </div>
+        </div>
+    </div>
+    <!-- 스크립트 -->
+    <script>
+        // 캔버스 초기 설정
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let w = canvas.width = window.innerWidth;
+        let h = canvas.height = window.innerHeight;
+
+        // 입자 및 폭죽 관련 변수
+        let particles = [];
+        let explosionParticles = [];
+        let fireworks = [];
+        let textPixels = [];
+        let fireworkY = h;
+        let fireworkLaunched = false;
+        let textAnimationDone = false;
+        let timer = 0;
+        let envelopeShown = false;
+
+        // 초기화
+        function init() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+            fireworkY = h;
+            particles = [];
+            fireworks = [];
+            textPixels = [];
+            fireworkLaunched = false;
+            textAnimationDone = false;
+            envelopeShown = false;
+
+            // 폰트 로딩 후 텍스트 픽셀 생성
+            document.fonts.ready.then(function() {
+                generateTextPixels();
+            });
+        }
+
+        // 텍스트 픽셀 생성
+        function generateTextPixels() {
+            const textCanvas = document.createElement('canvas');
+            const textCtx = textCanvas.getContext('2d');
+            textCanvas.width = w;
+            textCanvas.height = h;
+
+            const message = '생일 축하해 명지야';
+
+            // 폰트 크기를 동적으로 계산
+            let fontSize = 120; // 시작 폰트 크기
+            textCtx.font = `bold ${fontSize}px Nanum Gothic`;
+
+            // 텍스트의 너비
+            let textWidth = textCtx.measureText(message).width;
+
+            // 화면 너비의 90%를 넘지 않도록 폰트 크기를 조절
+            while (textWidth > w * 0.9) {
+                fontSize -= 2;
+                textCtx.font = `bold ${fontSize}px Nanum Gothic`;
+                textWidth = textCtx.measureText(message).width;
+            }
+
+            // 텍스트를 중앙에 그리기
+            textCtx.fillStyle = 'white';
+            textCtx.textAlign = 'center';
+            textCtx.textBaseline = 'middle';
+            textCtx.fillText(message, w / 2, h / 2);
+
+            const imageData = textCtx.getImageData(0, 0, w, h);
+            const data = imageData.data;
+
+            // 기존의 textPixels 초기화
+            textPixels = [];
+
+            for (let y = 0; y < h; y += 3) {
+                for (let x = 0; x < w; x += 3) {
+                    const index = (y * w + x) * 4;
+                    if (data[index + 3] > 128) {
+                        textPixels.push({ x: x, y: y });
+                    }
+                }
+            }
+        }
+
+        let eFlag = 0;
+        let tempLength = 0;
+        let fireworkLaunchDelay = 2500; // 지연 시간
+        let fireworkStartTime = null;    // 폭죽 발사 시작 시간
+
+        // 애니메이션 루프
+        function animate(timestamp) {
+            ctx.clearRect(0, 0, w, h);
+
+            // 애니메이션 시작 시간을 저장
+            if (!fireworkStartTime) {
+                fireworkStartTime = timestamp;
+            }
+
+            // 현재 경과 시간 계산
+            let elapsed = timestamp - fireworkStartTime;
+
+            // 지연 시간이 지나지 않은 경우
+            if (elapsed < fireworkLaunchDelay) {
+            }
+            // 폭죽 발사
+            else if (!fireworkLaunched) {
+                drawFirework();
+                fireworkY -= 10;
+                if (fireworkY < h / 2) {
+                    fireworkLaunched = true;
+                    createParticles();
+                }
+            }
+            // 텍스트 입자 애니메이션
+            else if (!textAnimationDone && eFlag > -1) {
+                updateParticles();
+                if ( tempLength > particles.length) {
+                    eFlag = 1;
+                }
+                tempLength = particles.length;
+                if (particles.length == 0 || eFlag == 1) {
+                    // textAnimationDone = true;
+
+                    // 텍스트 애니메이션 완료 후 3초 뒤에 편지 봉투 표시
+                    setTimeout(showEnvelope, 500);
+                }
+            }
+
+            // 지속적인 폭죽 발사
+            createRandomFireworks();
+
+            // 폭발 입자 업데이트 및 그리기
+            updateExplosionParticles();
+
+            requestAnimationFrame(animate);
+        }
+
+        // 초기 폭죽 그리기
+        function drawFirework() {
+            if (eFlag == -1) return;
+            ctx.save();
+
+            let centerX = w / 2;
+            let centerY = fireworkY;
+
+            // 블렌딩 모드 설정
+            ctx.globalCompositeOperation = 'lighter';
+
+            // 첫 번째 광원 레이어 (넓은 범위)
+            let gradientRadius1 = 160;
+            let gradient1 = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, gradientRadius1);
+            gradient1.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
+            gradient1.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = gradient1;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, gradientRadius1, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 두 번째 광원 레이어 (중간 범위)
+            let gradientRadius2 = 80;
+            let gradient2 = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, gradientRadius2);
+            gradient2.addColorStop(0, 'rgba(255, 255, 255, 0.5)');
+            gradient2.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = gradient2;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, gradientRadius2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 세 번째 광원 레이어 (작은 범위)
+            let gradientRadius3 = 30;
+            let gradient3 = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, gradientRadius3);
+            gradient3.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            gradient3.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = gradient3;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, gradientRadius3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 그림자 효과 설정 (추가 광원 효과)
+            ctx.shadowBlur = 100;
+            ctx.shadowColor = 'rgba(255, 255, 255, 1)';
+
+            // 중앙의 원 그리기 (핵심 부분)
+            ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 30, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 블렌딩 모드 원래대로 복원
+            ctx.globalCompositeOperation = 'source-over';
+
+            ctx.restore();
+        }
+
+
+
+        // 별 그리기
+        function drawStar(ctx, x, y, outerRadius, innerRadius, points) {
+            ctx.beginPath();
+            let angle = Math.PI / points;
+
+            for (let i = 0; i < 2 * points; i++) {
+                let r = (i % 2 === 0) ? outerRadius : innerRadius;
+                let currX = x + Math.cos(i * angle - Math.PI / 2) * r;
+                let currY = y + Math.sin(i * angle - Math.PI / 2) * r;
+                if (i === 0) {
+                    ctx.moveTo(currX, currY);
+                } else {
+                    ctx.lineTo(currX, currY);
+                }
+            }
+            ctx.closePath();
+        }
+
+
+
+        // 입자 생성
+        function createParticles() {
+            for (let i = 0; i < textPixels.length; i++) {
+                const p = textPixels[i];
+                particles.push({
+                    x: w / 2,
+                    y: fireworkY,
+                    dx: p.x + (Math.random() - 0.5) * 10,
+                    dy: p.y + (Math.random() - 0.5) * 10,
+                    vx: 0,
+                    vy: 0,
+                    alpha: 1,
+                    delay: Math.random() * 50,
+                    blinkOffset: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        let particleSpeedFactor = 0.01; // 입자 이동 속도
+        // 입자 업데이트
+        function updateParticles() {
+            const currentTime = performance.now();
+            let allParticlesReached = true; // 모든 입자가 목표 위치에 도달했는지 확인
+
+            particles.forEach((p, index) => {
+                if (p.delay > 0) {
+                    p.delay--;
+                    allParticlesReached = false;
+                } else {
+                    // 목표 위치에 도달하지 않은 경우에만 업데이트
+                    if (!p.reachedDestination) {
+                        // 목표 위치로 이동
+                        p.vx += (p.dx - p.x) * particleSpeedFactor;
+                        p.vy += (p.dy - p.y) * particleSpeedFactor;
+                        p.vx *= 0.9; // 0.8
+                        p.vy *= 0.9; // 0.8
+                        p.x += p.vx;
+                        p.y += p.vy;
+
+                        // 입자가 목표 위치에 도달했는지 확인
+                        if (Math.abs(p.dx - p.x) < 0.5 && Math.abs(p.dy - p.y) < 0.5) {
+                            p.x = p.dx;
+                            p.y = p.dy;
+                            p.vx = 0;
+                            p.vy = 0;
+                            p.reachedDestination = true;
+                            p.arrivalTime = currentTime; // 도착 시간 저장
+                            p.alpha = 1; // 페이드아웃을 위한 alpha 값 초기화
+                        } else {
+                            allParticlesReached = false;
+                        }
+                    } else {
+                        // 입자가 목표 위치에 도달한 후 3초 동안 유지
+                        let timeSinceArrival = currentTime - p.arrivalTime;
+                        if (timeSinceArrival >= 3000) { // 페이드아웃 시작 속도
+                            p.alpha -= 0.01; // 페이드아웃 속도 조절
+                            if (p.alpha <= 0) {
+                                p.alpha = 0;
+                            }
+                        }
+                    }
+
+                    // 반짝임 효과 적용
+                    const flicker = Math.abs(Math.sin((currentTime / 100) + p.blinkOffset));
+
+                    // 색상 변경
+                    const hue = (currentTime / 20) % 360;
+                    const color = `hsla(${hue}, 100%, 75%, ${p.alpha * flicker})`;
+
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+
+            // 모든 입자가 목표 위치에 도달했을 때
+            if (allParticlesReached && !textAnimationDone) {
+                // 텍스트 애니메이션 완료 후 3초 뒤에 편지 봉투 표시
+                setTimeout(() => {
+                    // textAnimationDone = true;
+                    showEnvelope();
+                }, 3000);
+            }
+
+            // 페이드아웃이 완료된 입자 제거
+            particles = particles.filter(p => p.alpha > 0);
+
+            // 입자들이 모두 제거되었을 때 편지 봉투 표시
+            if (particles.length === 0 && !envelopeShown) {
+                showEnvelope();
+                envelopeShown = true; // 중복 실행 방지
+            }
+        }
+
+        // 편지 봉투 표시 함수 추가
+        function showEnvelope() {
+            if (!envelopeShown) {
+                const container = document.getElementById('container');
+                container.style.display = 'block';
+                setTimeout(function() {
+                    container.style.opacity = '1';
+                    setTimeout(function() {
+                        textAnimationDone = true;
+                        eFlag = -1;
+                    }, 800);
+                }, 100);
+                envelopeShown = true;
+            }
+        }
+
+
+        // 폭죽
+        let limiterTotal = 5;
+        let limiterTick = 0;
+
+        function createRandomFireworks() {
+            if (limiterTick >= limiterTotal) {
+                const startX = Math.random() * w;
+                const startY = h;
+
+                const maxAngle = 20 * Math.PI / 180;
+                const angle = (Math.random() - 0.5) * 2 * maxAngle;
+                const distance = h / 2; // 화면 높이의 절반 정도
+
+                const targetX = startX + distance * Math.tan(angle);
+                // const targetX = Math.random() * w;
+                const targetY = Math.random() * h / 2;
+                fireworks.push(new Firework(startX, startY, targetX, targetY));
+                limiterTick = 0;
+            } else {
+                limiterTick++;
+            }
+
+            fireworks.forEach((fw, index) => {
+                fw.update(index);
+                fw.draw();
+            });
+        }
+
+        // Firework 클래스 정의
+        class Firework {
+            constructor(sx, sy, tx, ty) {
+                this.x = sx;
+                this.y = sy;
+                this.sx = sx;
+                this.sy = sy;
+                this.tx = tx;
+                this.ty = ty;
+                this.distanceToTarget = Math.hypot(tx - sx, ty - sy);
+                this.distanceTraveled = 0;
+                this.coordinates = [];
+                this.coordinateCount = 3;
+                while (this.coordinateCount--) {
+                    this.coordinates.push([this.x, this.y]);
+                }
+                this.angle = Math.atan2(ty - sy, tx - sx);
+                this.speed = 2;
+                this.acceleration = 1.05;
+                this.maxSpeed = 15; // 최대 속도
+                this.brightness = Math.random() * 50 + 50;
+                this.targetRadius = 1;
+            }
+
+            update(index) {
+                this.coordinates.pop();
+                this.coordinates.unshift([this.x, this.y]);
+
+                if (this.targetRadius < 8) {
+                    this.targetRadius += 0.3;
+                } else {
+                    this.targetRadius = 1;
+                }
+
+                this.speed *= this.acceleration;
+
+                // 최대 속도 제한 적용
+                if (this.speed > this.maxSpeed) {
+                    this.speed = this.maxSpeed;
+                }
+
+                const vx = Math.cos(this.angle) * this.speed;
+                const vy = Math.sin(this.angle) * this.speed;
+
+                this.distanceTraveled = Math.hypot(this.x - this.sx, this.y - this.sy);
+
+                if (this.distanceTraveled >= this.distanceToTarget) {
+                    // console.log(`111`);
+                    // console.log(`${this.tx} / ${this.ty}`);
+                    createExplosion(this.tx, this.ty);
+                    fireworks.splice(index, 1);
+                } else {
+                    this.x += vx;
+                    this.y += vy;
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
+                ctx.lineTo(this.x, this.y);
+                ctx.strokeStyle = `hsl(${Math.random() * 360}, 100%, ${this.brightness}%)`;
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(this.tx, this.ty, this.targetRadius, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        // 폭죽 폭발 입자 생성
+        function createExplosion(x, y) {
+            const particleCount = 40;
+            for (let i = 0; i < particleCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 2;
+                explosionParticles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    alpha: 1,
+                    decay: Math.random() * 0.02 + 0.01
+                });
+            }
+        }
+
+        function updateExplosionParticles() {
+            for (let i = explosionParticles.length - 1; i >= 0; i--) {
+                const p = explosionParticles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= p.decay;
+                if (p.alpha <= 0) {
+                    explosionParticles.splice(i, 1);
+                } else {
+                    const randomColor = () => {
+                        // 보라색, 하늘색, 흰색을 기본 색상으로 설정
+                        const colors = [
+                            { r: 128, g: 0, b: 128 },   // 보라색
+                            { r: 135, g: 206, b: 235 }, // 하늘색
+                            { r: 255, g: 255, b: 255 }  // 흰색
+                        ];
+
+                        // 기본 색상 중 하나를 랜덤으로 선택
+                        const baseColor = colors[Math.floor(Math.random() * colors.length)];
+
+                        // 오차 범위를 설정하여 약간의 색상 변화를 줌 (최대 ±30 범위에서 랜덤)
+                        const randomVariance = () => Math.floor(Math.random() * 61) - 30;
+
+                        // 각각의 색상 값에 오차 범위를 적용하여 약간의 변동을 줌
+                        const r = Math.max(0, Math.min(255, baseColor.r + randomVariance()));
+                        const g = Math.max(0, Math.min(255, baseColor.g + randomVariance()));
+                        const b = Math.max(0, Math.min(255, baseColor.b + randomVariance()));
+
+                        return `rgba(${r}, ${g}, ${b}, ${p.alpha})`;
+                    };
+                    ctx.fillStyle = randomColor();
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+
+
+        window.onload = function() {
+            init();
+            requestAnimationFrame(animate);
+        };
+        window.onresize = init;
+
+        // 편지 봉투 인터랙션
+        const envelope_container = document.getElementById('container');
+        const envelope = document.getElementById('envelope');
+        const base_envelope = document.getElementById('base-envelope');
+        const flap = document.getElementById('flap');
+        const letter = document.getElementById('letter');
+        const typedText = document.getElementById('typed-text');
+
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+
+        const letterContent =
+`To. 명지에게
+
+안녕, 명지야!
+25살 생일 내가 정말 많이 축하해🥳🥳🥳
+뭔가 기억에 남을만한 축하를 해주고 싶었는데,
+근 열흘? 동안 폐기된 것들만 십수개야..ㅎ
+내가 웹 개발자도 디자이너도 아니다보니 할 순 있는데 이래저래 버겁네😭
+그냥 심플하게 하자.. 해서 이걸로 마무리........
+원래 블로그 형태로 사진이나 노래 넣고 하다가 어떻게 됐는지 알아??
+60대 아저씨 감성마냥 예쁜 사진 몇개 넣고 '행복하세요' 느낌이라 하다가 폐기했어...ㅋㅋ
+결국 매일 새벽에 삽질만 엄청 하다 '참신한 편지지' 정도만 완성하자! 해서 이렇게라도 보내.
+음! 마음과 정성이 중요한거지 그럼그럼😊
+
+꼭!! 이런거 하면 더 잘해주고 싶어서, 더 좋은 경험만 주고 싶었는데
+열심히 하다가 미뤄지고 ㅠ 결국 체력관리 못해서 연차썼다. 헤헤
+명지와의 추억에 흙을 뿌리고 싶지 않기에 항상 좋은 것들만 해주고 싶었어.
+같이 맛난 것도 먹고 놀고도 싶지만.. 음..ㅎ
+하고픈 말 많은데 이것도 썼다 지웠다 하다가 결국 지금 시간이..
+18일 저녁 10시네! ㅋㅋ 적다보니 수십줄 그냥 넘어가서 열심히 줄였어.
+왜 줄였냐고? 횡설수설하던게 많아서 수정하려는데.. 아마 편지지 작업이
+11시 50분 쯤 끝날 것 같기 때문이지.
+아무튼! 명지의 날 즐겁고 재미나게 보내구! 맛난 것도 많이 먹구!!!
+행복한 하루 됐음 좋겠네
+
+다시 한번 생일 축하해
+
+From. 명지팬 1호가`;
+
+        let index = 0;
+
+        function typeText() {
+            if (index < letterContent.length) {
+                typedText.textContent += letterContent.charAt(index);
+                index++;
+
+                typedText.parentElement.scrollTop = typedText.parentElement.scrollHeight;
+
+                setTimeout(typeText, 70);
+            }
+        }
+
+
+        let sFlag = 0;
+        function adjustLetterScale() {
+            if (sFlag == 0) return;
+            const letter = document.getElementById('letter');
+            const letterContent = document.getElementById('letter-content');
+
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+
+            // 참조 해상도 (Full HD)
+            const referenceWidth = 1920;
+            const referenceHeight = 500;
+            const maxScale = 2.8;
+            const minScale = 0.2;
+
+            // 화면 비율에 따른 스케일 계산
+            let scale = windowHeight / referenceHeight;
+            scale = Math.max(minScale, Math.min(scale, maxScale));
+
+            // 편지에 스케일 적용
+            letter.style.transform = `translate(-50%, -25%) scale(${scale})`;
+
+            // 폰트 크기 및 패딩 조절
+            letterContent.style.fontSize = `${Math.min(1 * scale, 0.6)}em`;
+            letterContent.style.padding = `${15}px`;
+
+            // 편지의 실제 높이 계산
+            const letterHeight = letter.offsetHeight;
+            console.log(letterHeight)
+
+            // 패딩 값을 가져오기
+            const computedStyle = window.getComputedStyle(letterContent);
+            const paddingTop = parseFloat(computedStyle.paddingTop);
+            const paddingBottom = parseFloat(computedStyle.paddingBottom);
+
+            // 상단과 하단 여백을 동일하게 유지하기 위해 내용 영역의 최대 높이 계산
+            const contentMaxHeight = letterHeight - (paddingTop + paddingBottom);
+
+            // max-height 동적 설정
+            letterContent.style.maxHeight = `${contentMaxHeight}px`;
+        }
+
+        // 화면 크기 변경 시 스케일 재조정
+        window.addEventListener('resize', adjustLetterScale);
+
+        let flag = 1;
+        envelope_container.addEventListener('click', () => {
+            if (flag != 1) return;
+
+            flag = 0;
+            // 봉투 열기
+            flap.style.transform = 'rotateX(180deg)';
+
+            setTimeout(() => {
+                flap.style.zIndex = '6';
+
+                envelope.style.transform = 'translateY(200%)';
+                base_envelope.style.transform = 'translate(-50%, 152%)';
+                flap.style.transform = 'translate(0%, 400%)';
+
+                letter.style.transform = 'translate(-50%, -70%)';
+
+                setTimeout(() => {
+                    letter.classList.add('open');
+                    base_envelope.style.display = 'none';
+                    setTimeout(() => {
+                        sFlag = 1;
+                        adjustLetterScale();
+
+                        envelope.style.opacity = '0';
+                        flap.style.opacity = '0';
+
+                        typedText.parentElement.classList.add('visible');
+                        typeText();
+                    }, 1000);
+                }, 700);
+            }, 2300);
+        });
+    </script>
+</body>
+</html>

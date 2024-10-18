@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>생일축하해 명지야</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #f8f8f8;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .container {
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+        }
+
+        .snap-section {
+            scroll-snap-align: center;
+            height: 100vh;
+            position: relative;
+        }
+
+        .section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            width: 100%;
+            font-size: 3em;
+            color: #333;
+            text-align: center;
+            transition: transform 1.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 1.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .hidden {
+            opacity: 0;
+            transform: translateY(100px);
+        }
+
+        #typing-text {
+            border-right: 2px solid #333;
+            white-space: nowrap;
+            overflow: hidden;
+            font-size: 4em;
+        }
+
+        @keyframes blink {
+            from, to { border-color: transparent; }
+            50% { border-color: #333; }
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f0f;
+            opacity: 0;
+            animation: fall 6s ease-out 1, fade-in 0.2s ease-in;
+        }
+
+        @keyframes fall {
+            0% { transform: translateY(-100%); opacity: 1; }
+            100% { transform: translateY(300vh); opacity: 0; }
+        }
+
+        @keyframes fade-in {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        .button-container {
+            display: none;
+            margin-top: 20px;
+        }
+
+        #celebrate-button {
+            padding: 15px 8%;
+            font-size: 1.5em;
+            background: linear-gradient(135deg, #d7aefb, #b388ff);
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+            width: auto;
+            min-width: 250px;
+            max-width: 350px;
+            box-sizing: border-box;
+            white-space: nowrap;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        #celebrate-button:hover {
+            background: linear-gradient(135deg, #b388ff, #d7aefb);
+            transform: scale(1.05);
+        }
+
+        .button-container {
+            display: none;
+            margin-top: 20px;
+            opacity: 0;
+            transition: opacity 0.5s ease-in;
+        }
+
+        .arrow-down {
+            position: absolute;
+            bottom: 30%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1em;
+            animation: bounce 1.5s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateX(-50%) translateY(0);
+            }
+            50% {
+                transform: translateX(-50%) translateY(10px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="snap-section">
+            <div class="section" id="section-1">오늘은 무슨날?
+                <div class="arrow-down">↓</div>
+            </div>
+        </div>
+        <div class="snap-section">
+            <div class="section hidden" id="section-2">10월 19일은</div>
+        </div>
+        <div class="snap-section">
+            <div class="section hidden" id="section-3">1년에</div>
+        </div>
+        <div class="snap-section">
+            <div class="section hidden" id="section-4">단</div>
+        </div>
+        <div class="snap-section">
+            <div class="section hidden" id="section-5">한번 뿐인</div>
+        </div>
+        <div class="snap-section">
+            <div class="section hidden" id="typing-text">ㅁ</div>
+            <div class="button-container" id="button-container" style="position: absolute; top: 65%; left: 50%; transform: translate(-50%, -50%);">
+    <button id="celebrate-button" onclick="window.location.href='./card.html'">🥳생일 축하해🎉</button>
+</div>
+        </div>
+    </div>
+
+    <script>
+        const sections = document.querySelectorAll('.section');
+        const options = {
+            root: null,
+            threshold: 0.2
+        };
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.remove('hidden');
+                    if (entry.target.id === 'typing-text') {
+                        triggerTypingAnimation();
+                        triggerConfetti();
+                    }
+                } else {
+                    entry.target.classList.add('hidden');
+                }
+            });
+        }, options);
+
+        sections.forEach(section => {
+            observer.observe(section);
+        });
+
+        function triggerTypingAnimation() {
+            const typingText = document.getElementById('typing-text');
+            const textArray = ['ㅁ', '며', '명', '명ㅈ', '명지', '명지ㅇ', '명지으', '명지의', '명지의 ㄴ', '명지의 나', '명지의 날', '명지의 날!'];
+            let index = 0;
+            const interval = setInterval(() => {
+                typingText.textContent = textArray[index];
+                index++;
+                if (index === textArray.length) {
+                    clearInterval(interval);
+                    showCelebrateButton();
+                }
+            }, 40);
+        }
+
+        function triggerConfetti() {
+            for (let i = 0; i < 300; i++) {
+                const confetti = document.createElement('div');
+                confetti.classList.add('confetti');
+                confetti.style.left = Math.random() * window.innerWidth + 'px';
+                confetti.style.top = -Math.random() * window.innerHeight + 'px';
+                confetti.style.backgroundColor = getRandomColor();
+                document.body.appendChild(confetti);
+                setTimeout(() => confetti.remove(), 12000);
+            }
+        }
+
+        function getRandomColor() {
+            const colors = ['#f0f', '#0ff', '#ff0', '#f00', '#0f0', '#00f'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        function showCelebrateButton() {
+            const buttonContainer = document.getElementById('button-container');
+            buttonContainer.style.display = 'flex';
+            setTimeout(() => {
+                buttonContainer.style.opacity = '1';
+            }, 100);
+        }
+    </script>
+</body>
+</html>
