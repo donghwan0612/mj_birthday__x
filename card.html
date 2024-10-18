@@ -1,10 +1,15 @@
 <!DOCTYPE html>
+<script>
+    const preloadImage = new Image();
+    preloadImage.src = './paper-texture.png';
+</script>
+
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>생일 축하합니다!</title>
-    <!-- 한글 폰트 추가 -->
+    <title>편지봉투</title>
     <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic&display=swap" rel="stylesheet">
+    <link rel="preload" href="./font.ttf" as="font" type="font/ttf" crossorigin>
     <style>
         @font-face {
             font-family: 'Nanum GarMaesGeur';
@@ -12,6 +17,7 @@
             font-weight: normal;
             font-style: normal;
         }
+
         body { margin: 0; overflow: hidden; background-color: black; }
         canvas {
             display: block;
@@ -103,6 +109,8 @@
             background-image: url('./paper-texture.png'); /* 종이 질감 */
             background-size: cover;
             background-repeat: no-repeat;
+            background-clip: border-box;
+            background-position: center;
         }
 
         /* 그라데이션 오버레이 추가 */
@@ -132,7 +140,7 @@
             display: flex;
             justify-content: center;
             align-items: flex-start;
-            <!-- font-family: 'Cormorant Garamond', serif; -->
+            font-family: 'Nanum GarMaesGeur', sans-serif;
             font-size: 0.6em;
             color: #333;
             opacity: 0;
@@ -182,7 +190,7 @@
         <div class="envelope" id="envelope"></div>
         <div class="letter" id="letter">
             <div class="letter-content" id="letter-content">
-                <p id="typed-text"></p>
+                <p id="typed-text" style="width:100%" ></p>
             </div>
         </div>
     </div>
